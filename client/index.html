@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pet Shop Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Pet Shop Dashboard</h1>
+
+    <h2>Repeat Customers</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Customer Name</th>
+          <th>Number of Pets</th>
+        </tr>
+      </thead>
+      <tbody id="repeat-customers"></tbody>
+    </table>
+
+    <h2>Staff Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Staff ID</th>
+          <th>Staff Name</th>
+          <th>Service ID</th>
+          <th>Service Name</th>
+        </tr>
+      </thead>
+      <tbody id="staff"></tbody>
+    </table>
+
+    <h2>Invoice Overview</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Invoice ID</th>
+          <th>Customer Name</th>
+          <th>Amount</th>
+          <th>Payment Method</th>
+          <th>Admin</th>
+          <th>Due Date</th>
+          <th>Invoice Status</th>
+          <th>Payment Status</th>
+        </tr>
+      </thead>
+      <tbody id="invoices"></tbody>
+    </table>
+
+    <h2>Top Rated Staff</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Staff ID</th>
+          <th>Staff Name</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody id="staff-ratings"></tbody>
+    </table>
+
+    <h2>Appointment Status</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Appointment ID</th>
+          <th>Pet Name</th>
+          <th>Service</th>
+          <th>Staff</th>
+          <th>Duration</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="appointments"></tbody>
+    </table>
+
+    <script src="app.js"></script>
+  </body>
+</html>
