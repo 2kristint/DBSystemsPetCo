@@ -59,6 +59,8 @@ app.get("/data", async (req, res) => {
       JOIN Staff St ON St.staffID=A.staffID;`,
     );
 
+    const [pets] = await db.query("SELECT p.petID, p.petName FROM Pet p;");
+
     // Remember to add new queries here
     res.json({
       repeatCustomers,
@@ -66,10 +68,74 @@ app.get("/data", async (req, res) => {
       invoices,
       staffRatings,
       appointmentStatus,
+      pets,
     });
   } catch (err) {
     console.error("Error executing queries:", err);
     res.status(500).send("Server error");
+  }
+});
+
+//Create new tuple
+app.post("/api/appointments", async (req, res) => {
+  const {
+    apptID,
+    petID,
+    staffID,
+    appointmentStatus,
+    serviceID,
+    date,
+    startTime,
+    duration,
+    serviceNotes,
+    appointmentRating,
+  } = req.body;
+  try {
+    await db.query(
+      `INSERT INTO Appointment (apptID, petID, staffID, appointmentStatus, serviceID, date, startTime, duration, serviceNotes, appointmentRating)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        apptID,
+        petID,
+        staffID,
+        appointmentStatus,
+        serviceID,
+        date,
+        startTime,
+        duration,
+        serviceNotes,
+        appointmentRating,
+      ],
+    );
+    res.status(201).json({ message: "Appointment created" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update tuple
+app.put("/api/appointments/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  try {
+    await db.query(
+      `UPDATE Appointment SET appointmentStatus = ? WHERE apptID = ?`,
+      [status, id],
+    );
+    res.json({ message: "Appointment updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Delete tuple
+app.delete("/api/appointments/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query(`DELETE FROM Appointment WHERE apptID = ?`, [id]);
+    res.json({ message: "Appointment deleted" });
+  } catch (err) {
+    res.status(500).send(err.message);
   }
 });
 
