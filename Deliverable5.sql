@@ -124,6 +124,7 @@ INSERT INTO Customer VALUES
 ('C0004', 'Sophia Nguyen', '847-555-4432', 'sophia.n@gmail.com', '321 Pine Rd, Naperville'),
 ('C0005', 'Michael Thompson', '630-555-7719', 'mthompson@gmail.com', '654 Cedar Ln, Aurora');
 
+
 -- Pet
 INSERT INTO Pet VALUES
 ('P0001', 'C0001', 'Amber', 2, 'Dog', 'Husky', 'large', 'Sensitive to loud noises'),
@@ -209,17 +210,187 @@ END;;
 
 DELIMITER ;
 
+DROP TRIGGER IF EXISTS create_invoice_after_completion;
+DELIMITER %%
+-- Trigger creates invoices when appointment status is changed to complete
+CREATE TRIGGER create_invoice_after_completion
+AFTER UPDATE ON Appointment
+FOR EACH ROW
+BEGIN
+    DECLARE custID VARCHAR(10);
+    DECLARE svcType VARCHAR(50);
+    DECLARE svcDesc VARCHAR(100);
+    DECLARE rate DECIMAL(10,2);
+    DECLARE amt DECIMAL(10,2);
+    IF NEW.appointmentStatus = 'complete' AND OLD.appointmentStatus <> 'complete' THEN
+        SELECT customerID INTO custID
+        FROM Pet
+        WHERE petID = NEW.petID;
+        
+        SELECT serviceType INTO svcType
+        FROM Service
+        WHERE serviceID = NEW.serviceID;
+        
+        SELECT serviceName INTO svcDesc
+        FROM Service
+        WHERE serviceID = NEW.serviceID;
+        
+        IF svcType = 'dog-walking' THEN
+            SET rate = 30;
+        ELSEIF svcType = 'pet-sitting' THEN
+            SET rate = 45;
+        ELSEIF svcType = 'training' THEN
+            SET rate = 60;
+        END IF;
+        SET amt = NEW.duration * rate;
+
+        INSERT INTO Invoice (invoiceID, customerID, adminID, status, billingAddress, amount, dateCreated, dueDate, serviceDescription)
+        VALUES (
+            CONCAT('AUTO', NEW.apptID),
+            custID,
+            'AD01',
+            'unpaid',
+            '123 Elm St, Chicago',
+            amt,
+            CURDATE(),
+            DATE_ADD(CURDATE(), INTERVAL 10 DAY),
+            svcDesc
+        );
+
+    END IF;
+END %%
+
+DELIMITER ;
+-- test trigger
+SELECT * FROM Appointment;
+UPDATE Appointment
+SET appointmentStatus = 'scheduled'
+WHERE apptID = 'A0001';
+SELECT * FROM Invoice;
+DELETE FROM Invoice
+WHERE invoiceID = 'AUTOA0001';
+
+
+DROP TRIGGER IF EXISTS trg_prevent_overlaps
+DELIMITER $$
+-- prevents overlapping appointments for staff members and pets from being booked
+CREATE TRIGGER trg_prevent_overlaps
+BEFORE INSERT ON Appointment
+FOR EACH ROW
+BEGIN
+    DECLARE staff_conflicts INT;
+    DECLARE pet_conflicts INT;
+    SELECT COUNT(*)
+    INTO staff_conflicts
+    FROM Appointment
+    WHERE staffID = NEW.staffID
+      AND date = NEW.date
+      AND appointmentStatus IN ('scheduled', 'in progress')
+      AND (
+            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
+            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
+      );
+    SELECT COUNT(*)
+    INTO pet_conflicts
+    FROM Appointment
+    WHERE petID = NEW.petID
+      AND date = NEW.date
+      AND appointmentStatus IN ('scheduled', 'in progress')
+      AND (
+            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
+            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
+      );
+
+    IF staff_conflicts > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff member already has an overlapping appointment';
+    END IF;
+    IF pet_conflicts > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Pet already has an overlapping appointment';
+    END IF;
+
+END $$
+
+DELIMITER ;
+-- test trigger
+SELECT * FROM Appointment;
+INSERT INTO Appointment
+VALUES (
+'A0006', 'P0002', 'S0001', 'scheduled', 'J01', '2025-03-20', '11:30:00', 1.00, 'Overlap test', 1);
+DELETE FROM Appointment
+WHERE apptID = 'A0006';
+
+-- Procedure
+DELIMITER ;;
+-- Track which pets use which services most 
+CREATE PROCEDURE GetPetServiceUsage()
+BEGIN
+    SELECT 
+        p.petID,
+        p.petName,
+        s.serviceName,
+        COUNT(a.apptID) AS times_used
+    FROM Appointment a
+    JOIN Pet p ON p.petID = a.petID
+    JOIN Service s ON s.serviceID = a.serviceID
+    GROUP BY p.petID, p.petName, s.serviceName
+    ORDER BY p.petID, times_used DESC;
+END;;
+
+DELIMITER ;
+CALL GetPetServiceUsage();
+
+
+-- Function
+DELIMITER %%
+-- Get the total number of services provided in any given month and year
+CREATE FUNCTION GetMonthlyServiceCount(inputMonth INT, inputYear INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+    SELECT COUNT(*)
+    INTO total
+    FROM Appointment
+    WHERE MONTH(date) = inputMonth
+      AND YEAR(date) = inputYear;
+	RETURN total;
+END %%
+
+DELIMITER ;
+SELECT GetMonthlyServiceCount(3, 2025);
+
 -- QUERIES/VIEWS
 --  Find customers with the most amount of pets to identify high-value or repeat customers
-SELECT c.customerName, COUNT(p.petID) AS num_pets FROM Pet p JOIN Customer c ON c.customerID = p.customerID GROUP BY p.customerID ORDER BY COUNT(p.petID) DESC;
+SELECT c.customerName, COUNT(p.petID) AS num_pets 
+FROM Pet p JOIN Customer c ON c.customerID = p.customerID 
+GROUP BY p.customerID 
+ORDER BY COUNT(p.petID) DESC;
 -- Q2 Staff overview
-SELECT p.staffID, st.staffName, p.serviceID, se.serviceName FROM Performs p JOIN Staff st ON p.staffID = st.staffID JOIN Service se ON se.serviceID=p.serviceID;
+SELECT p.staffID, st.staffName, p.serviceID, se.serviceName 
+FROM Performs p 
+JOIN Staff st ON p.staffID = st.staffID 
+JOIN Service se ON se.serviceID=p.serviceID;
 -- Q3 Invoice overview
-SELECT I.invoiceID, I.customerID, C.customerName, I.amount, P.method, I.adminID, A.name, I.dueDate, I.status AS invoice_status, P.status AS payment_status FROM Invoice I JOIN Customer C ON C.customerID=I.customerID LEFT JOIN Payment P ON P.invoiceID=I.invoiceID JOIN Admin A on A.adminID=I.adminID;
+SELECT I.invoiceID, I.customerID, C.customerName, I.amount, P.method, 
+I.adminID, A.name, I.dueDate, I.status AS invoice_status, P.status AS payment_status 
+FROM Invoice I 
+JOIN Customer C ON C.customerID=I.customerID 
+LEFT JOIN Payment P ON P.invoiceID=I.invoiceID 
+JOIN Admin A on A.adminID=I.adminID;
 -- Q4 Analyze staff appointment ratings by staff member compared to overall average ratings to evaluate performance
-SELECT staffID, staffName, staffRating FROM Staff WHERE staffRating > (SELECT AVG(staffRating) FROM Staff) ORDER BY staffRating DESC;
+SELECT staffID, staffName, staffRating 
+FROM Staff 
+WHERE staffRating > (SELECT AVG(staffRating) FROM Staff) 
+ORDER BY staffRating DESC;
 -- Q5 Appointment status
-SELECT A.apptID, P.petName, Se.serviceName, St.staffName, Se.standardDuration AS appt_len, A.appointmentStatus AS appt_status FROM Appointment A JOIN Service Se ON Se.serviceID=A.serviceID JOIN Pet P ON P.petID=A.petID JOIN Staff St ON St.staffID=A.staffID;
+SELECT A.apptID, P.petName, Se.serviceName, St.staffName, A.date, A.startTime, Se.standardDuration AS appt_len, 
+A.appointmentStatus AS appt_status 
+FROM Appointment A 
+JOIN Service Se ON Se.serviceID=A.serviceID 
+JOIN Pet P ON P.petID=A.petID 
+JOIN Staff St ON St.staffID=A.staffID;
 -- V1 Service usage overview
 CREATE VIEW ServiceUsage AS
 SELECT se.serviceID, se.serviceName, COUNT(a.apptID) AS totalAppointments FROM Service se LEFT JOIN Appointment a ON a.serviceID = se.serviceID GROUP BY se.serviceID, se.serviceName;

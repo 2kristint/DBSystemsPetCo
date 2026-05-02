@@ -71,7 +71,7 @@ async function fetchData() {
         <td>${row.petName}</td>
         <td>${row.serviceName}</td>
         <td>${row.staffName}</td>
-        <td>${row.appt_len} mins</td>
+        <td>${row.appt_len} hrs</td>
         <td>${row.appt_status}</td>
       </tr>
     `,
