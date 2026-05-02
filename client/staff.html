@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Staff Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Staff Dashboard</h1>
+
+    <!-- Profile section: filled in by JS -->
+    <h2>My Profile</h2>
+    <p><strong>Name:</strong> <span id="profile-name"></span></p>
+    <p><strong>Role:</strong> <span id="profile-role"></span></p>
+    <p><strong>Phone:</strong> <span id="profile-phone"></span></p>
+    <p><strong>Email:</strong> <span id="profile-email"></span></p>
+    <p><strong>Availability:</strong> <span id="profile-availability"></span></p>
+    <p><strong>Rating:</strong> <span id="profile-rating"></span></p>
+
+    <hr />
+
+    <!-- Services section -->
+    <h2>My Services</h2>
+    <p>Services I'm qualified to perform.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Service ID</th>
+          <th>Service Name</th>
+          <th>Type</th>
+          <th>Standard Duration (hrs)</th>
+        </tr>
+      </thead>
+      <tbody id="services"></tbody>
+    </table>
+
+    <hr />
+
+    <!-- Appointments section -->
+    <h2>My Appointments</h2>
+    <p>Appointments assigned to me.</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Appointment ID</th>
+          <th>Date</th>
+          <th>Start Time</th>
+          <th>Duration (hrs)</th>
+          <th>Pet</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody id="appointments"></tbody>
+    </table>
+
+    <script src="staff.js"></script>
+  </body>
+</html>
