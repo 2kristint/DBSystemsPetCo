@@ -139,6 +139,60 @@ app.delete("/api/appointments/:id", async (req, res) => {
   }
 });
 
+// Get one staff member's info
+app.get("/api/staff/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query(
+      `SELECT staffID, staffName, role, phoneNo, email, availability, staffRating
+       FROM Staff
+       WHERE staffID = ?`,
+      [id],
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Get services this staff member is qualified to perform
+app.get("/api/staff/:id/services", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [services] = await db.query(
+      `SELECT s.serviceID, s.serviceName, s.serviceType, s.standardDuration
+       FROM Performs p
+       JOIN Service s ON s.serviceID = p.serviceID
+       WHERE p.staffID = ?`,
+      [id],
+    );
+    res.json(services);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Get appointments assigned to this staff member
+app.get("/api/staff/:id/appointments", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [appointments] = await db.query(
+      `SELECT a.apptID, a.date, a.startTime, a.duration, a.appointmentStatus,
+              a.serviceNotes, a.appointmentRating,
+              p.petName, s.serviceName
+       FROM Appointment a
+       JOIN Pet p ON p.petID = a.petID
+       JOIN Service s ON s.serviceID = a.serviceID
+       WHERE a.staffID = ?
+       ORDER BY a.date, a.startTime`,
+      [id],
+    );
+    res.json(appointments);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 /* Starting server */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
