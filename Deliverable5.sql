@@ -115,6 +115,120 @@ CREATE TABLE Payment (
 );
 
 
+-- TRIGGERS (defined before inserts so they fire on seed data)
+
+DROP TRIGGER IF EXISTS trg_update_staff_rating;
+DELIMITER ;;
+CREATE TRIGGER trg_update_staff_rating
+AFTER INSERT ON Appointment
+FOR EACH ROW
+BEGIN
+    UPDATE Staff
+    SET staffRating = (
+        SELECT AVG(appointmentRating)
+        FROM Appointment
+        WHERE staffID = NEW.staffID
+          AND appointmentRating IS NOT NULL
+    )
+    WHERE staffID = NEW.staffID;
+END;;
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS create_invoice_after_completion;
+DELIMITER %%
+-- Trigger creates invoices when appointment status is changed to complete
+CREATE TRIGGER create_invoice_after_completion
+AFTER UPDATE ON Appointment
+FOR EACH ROW
+BEGIN
+    DECLARE custID VARCHAR(10);
+    DECLARE svcType VARCHAR(50);
+    DECLARE svcDesc VARCHAR(100);
+    DECLARE rate DECIMAL(10,2);
+    DECLARE amt DECIMAL(10,2);
+    IF NEW.appointmentStatus = 'complete' AND OLD.appointmentStatus <> 'complete' THEN
+        SELECT customerID INTO custID
+        FROM Pet
+        WHERE petID = NEW.petID;
+        
+        SELECT serviceType INTO svcType
+        FROM Service
+        WHERE serviceID = NEW.serviceID;
+        
+        SELECT serviceName INTO svcDesc
+        FROM Service
+        WHERE serviceID = NEW.serviceID;
+        
+        IF svcType = 'dog-walking' THEN
+            SET rate = 30;
+        ELSEIF svcType = 'pet-sitting' THEN
+            SET rate = 45;
+        ELSEIF svcType = 'training' THEN
+            SET rate = 60;
+        END IF;
+        SET amt = NEW.duration * rate;
+
+        INSERT INTO Invoice (invoiceID, customerID, adminID, status, billingAddress, amount, dateCreated, dueDate, serviceDescription)
+        VALUES (
+            CONCAT('AUTO', NEW.apptID),
+            custID,
+            'AD01',
+            'unpaid',
+            '123 Elm St, Chicago',
+            amt,
+            CURDATE(),
+            DATE_ADD(CURDATE(), INTERVAL 10 DAY),
+            svcDesc
+        );
+
+    END IF;
+END %%
+DELIMITER ;
+
+DROP TRIGGER IF EXISTS trg_prevent_overlaps;
+DELIMITER $$
+-- prevents overlapping appointments for staff members and pets from being booked
+CREATE TRIGGER trg_prevent_overlaps
+BEFORE INSERT ON Appointment
+FOR EACH ROW
+BEGIN
+    DECLARE staff_conflicts INT;
+    DECLARE pet_conflicts INT;
+    SELECT COUNT(*)
+    INTO staff_conflicts
+    FROM Appointment
+    WHERE staffID = NEW.staffID
+      AND date = NEW.date
+      AND appointmentStatus IN ('scheduled', 'in progress')
+      AND (
+            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
+            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
+      );
+    SELECT COUNT(*)
+    INTO pet_conflicts
+    FROM Appointment
+    WHERE petID = NEW.petID
+      AND date = NEW.date
+      AND appointmentStatus IN ('scheduled', 'in progress')
+      AND (
+            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
+            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
+      );
+
+    IF staff_conflicts > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Staff member already has an overlapping appointment';
+    END IF;
+    IF pet_conflicts > 0 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Pet already has an overlapping appointment';
+    END IF;
+
+END $$
+DELIMITER ;
+
+
+-- INSERTS
 
 -- Customer
 INSERT INTO Customer VALUES
@@ -191,77 +305,10 @@ INSERT INTO Payment VALUES
 ('PM04', 'I0003', 'AD03', 100.00, '2025-03-28', 'online', 'failed'),
 ('PM05', 'I0005', 'AD05', 60.00, '2025-03-29', 'credit card', 'pending');
 
---TRIGGERS
-DELIMITER ;;
 
-CREATE TRIGGER trg_update_staff_rating
-AFTER INSERT ON Appointment
-FOR EACH ROW
-BEGIN
-    UPDATE Staff
-    SET staffRating = (
-        SELECT AVG(appointmentRating)
-        FROM Appointment
-        WHERE staffID = NEW.staffID
-          AND appointmentRating IS NOT NULL
-    )
-    WHERE staffID = NEW.staffID;
-END;;
+-- TEST TRIGGERS (run after inserts)
 
-DELIMITER ;
-
-DROP TRIGGER IF EXISTS create_invoice_after_completion;
-DELIMITER %%
--- Trigger creates invoices when appointment status is changed to complete
-CREATE TRIGGER create_invoice_after_completion
-AFTER UPDATE ON Appointment
-FOR EACH ROW
-BEGIN
-    DECLARE custID VARCHAR(10);
-    DECLARE svcType VARCHAR(50);
-    DECLARE svcDesc VARCHAR(100);
-    DECLARE rate DECIMAL(10,2);
-    DECLARE amt DECIMAL(10,2);
-    IF NEW.appointmentStatus = 'complete' AND OLD.appointmentStatus <> 'complete' THEN
-        SELECT customerID INTO custID
-        FROM Pet
-        WHERE petID = NEW.petID;
-        
-        SELECT serviceType INTO svcType
-        FROM Service
-        WHERE serviceID = NEW.serviceID;
-        
-        SELECT serviceName INTO svcDesc
-        FROM Service
-        WHERE serviceID = NEW.serviceID;
-        
-        IF svcType = 'dog-walking' THEN
-            SET rate = 30;
-        ELSEIF svcType = 'pet-sitting' THEN
-            SET rate = 45;
-        ELSEIF svcType = 'training' THEN
-            SET rate = 60;
-        END IF;
-        SET amt = NEW.duration * rate;
-
-        INSERT INTO Invoice (invoiceID, customerID, adminID, status, billingAddress, amount, dateCreated, dueDate, serviceDescription)
-        VALUES (
-            CONCAT('AUTO', NEW.apptID),
-            custID,
-            'AD01',
-            'unpaid',
-            '123 Elm St, Chicago',
-            amt,
-            CURDATE(),
-            DATE_ADD(CURDATE(), INTERVAL 10 DAY),
-            svcDesc
-        );
-
-    END IF;
-END %%
-
-DELIMITER ;
--- test trigger
+-- test create_invoice_after_completion
 SELECT * FROM Appointment;
 UPDATE Appointment
 SET appointmentStatus = 'scheduled'
@@ -270,50 +317,7 @@ SELECT * FROM Invoice;
 DELETE FROM Invoice
 WHERE invoiceID = 'AUTOA0001';
 
-
-DROP TRIGGER IF EXISTS trg_prevent_overlaps
-DELIMITER $$
--- prevents overlapping appointments for staff members and pets from being booked
-CREATE TRIGGER trg_prevent_overlaps
-BEFORE INSERT ON Appointment
-FOR EACH ROW
-BEGIN
-    DECLARE staff_conflicts INT;
-    DECLARE pet_conflicts INT;
-    SELECT COUNT(*)
-    INTO staff_conflicts
-    FROM Appointment
-    WHERE staffID = NEW.staffID
-      AND date = NEW.date
-      AND appointmentStatus IN ('scheduled', 'in progress')
-      AND (
-            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
-            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
-      );
-    SELECT COUNT(*)
-    INTO pet_conflicts
-    FROM Appointment
-    WHERE petID = NEW.petID
-      AND date = NEW.date
-      AND appointmentStatus IN ('scheduled', 'in progress')
-      AND (
-            NEW.startTime < ADDTIME(startTime, SEC_TO_TIME(duration * 3600))
-            AND ADDTIME(NEW.startTime, SEC_TO_TIME(NEW.duration * 3600)) > startTime
-      );
-
-    IF staff_conflicts > 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Staff member already has an overlapping appointment';
-    END IF;
-    IF pet_conflicts > 0 THEN
-        SIGNAL SQLSTATE '45000'
-        SET MESSAGE_TEXT = 'Pet already has an overlapping appointment';
-    END IF;
-
-END $$
-
-DELIMITER ;
--- test trigger
+-- test trg_prevent_overlaps
 SELECT * FROM Appointment;
 INSERT INTO Appointment
 VALUES (
@@ -321,7 +325,8 @@ VALUES (
 DELETE FROM Appointment
 WHERE apptID = 'A0006';
 
--- Procedure
+
+-- PROCEDURE
 DELIMITER ;;
 -- Track which pets use which services most 
 CREATE PROCEDURE GetPetServiceUsage()
@@ -342,7 +347,7 @@ DELIMITER ;
 CALL GetPetServiceUsage();
 
 
--- Function
+-- FUNCTION
 DELIMITER %%
 -- Get the total number of services provided in any given month and year
 CREATE FUNCTION GetMonthlyServiceCount(inputMonth INT, inputYear INT)
@@ -361,7 +366,9 @@ END %%
 DELIMITER ;
 SELECT GetMonthlyServiceCount(3, 2025);
 
+
 -- QUERIES/VIEWS
+
 --  Find customers with the most amount of pets to identify high-value or repeat customers
 SELECT c.customerName, COUNT(p.petID) AS num_pets 
 FROM Pet p JOIN Customer c ON c.customerID = p.customerID 
