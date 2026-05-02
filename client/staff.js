@@ -4,6 +4,23 @@ const API = "http://localhost:5000";
 // based on whoever logged in.
 const STAFF_ID = "S0001";
 
+async function updateStatus(apptID) {
+  // Read the new status from the dropdown for this appointment
+  const newStatus = document.getElementById(`status-${apptID}`).value;
+
+  try {
+    await fetch(`${API}/api/appointments/${apptID}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    // Refresh the page data so the new status (and any new invoice) shows up
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update status:", err);
+  }
+}
+
 async function fetchStaffData() {
   try {
     // 1. PROFILE: fetch this staff member's basic info
@@ -51,6 +68,14 @@ async function fetchStaffData() {
             <td>${row.appointmentStatus}</td>
             <td>${row.serviceNotes ?? ""}</td>
             <td>${row.appointmentRating ?? ""}</td>
+            <td>
+              <select id="status-${row.apptID}">
+                <option value="scheduled" ${row.appointmentStatus === "scheduled" ? "selected" : ""}>Scheduled</option>
+                <option value="in progress" ${row.appointmentStatus === "in progress" ? "selected" : ""}>In Progress</option>
+                <option value="complete" ${row.appointmentStatus === "complete" ? "selected" : ""}>Complete</option>
+              </select>
+              <button onclick="updateStatus('${row.apptID}')">Save</button>
+            </td>
           </tr>
         `,
       )
