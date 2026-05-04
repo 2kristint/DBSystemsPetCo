@@ -223,6 +223,51 @@ app.get("/api/staff/:id/appointments", async (req, res) => {
   }
 });
 
+// Update a staff member's phone
+app.put("/api/staff/:id/phone", async (req, res) => {
+  const { id } = req.params;
+  const { phoneNo } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET phoneNo = ? WHERE staffID = ?`,
+      [phoneNo, id],
+    );
+    res.json({ message: "Phone number updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update a staff member's email
+app.put("/api/staff/:id/email", async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET email = ? WHERE staffID = ?`,
+      [email, id],
+    );
+    res.json({ message: "Email updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update an appointment's duration
+app.put("/api/appointments/:id/duration", async (req, res) => {
+  const { id } = req.params;
+  const { duration } = req.body;
+  try {
+    await db.query(
+      `UPDATE Appointment SET duration = ? WHERE apptID = ?`,
+      [duration, id],
+    );
+    res.json({ message: "Duration updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 /* Starting server */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

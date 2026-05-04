@@ -2,7 +2,7 @@ const API = "http://localhost:5000";
 
 // Hardcoded for now. When login is added, this will be set
 // based on whoever logged in.
-const STAFF_ID = "S0003";
+const STAFF_ID = "S0001";
 
 async function updateStatus(apptID) {
   // Read the new status from the dropdown for this appointment
@@ -55,6 +55,51 @@ async function updateAvailability() {
   }
 }
 
+async function updatePhone() {
+  const newPhone = document.getElementById("phone-input").value;
+  if (!newPhone.trim()) return;
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/phone`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNo: newPhone }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update phone:", err);
+  }
+}
+
+async function updateEmail() {
+  const newEmail = document.getElementById("email-input").value;
+  if (!newEmail.trim()) return;
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/email`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newEmail }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update email:", err);
+  }
+}
+
+async function updateDuration(apptID) {
+  const newDuration = document.getElementById(`duration-${apptID}`).value;
+  if (!newDuration) return;
+  try {
+    await fetch(`${API}/api/appointments/${apptID}/duration`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duration: parseFloat(newDuration) }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update duration:", err);
+  }
+}
+
 async function fetchStaffData() {
   try {
     // 1. PROFILE: fetch this staff member's basic info
@@ -97,6 +142,10 @@ async function fetchStaffData() {
             <td>${new Date(row.date).toLocaleDateString()}</td>
             <td>${row.startTime}</td>
             <td>${row.duration}</td>
+            <td>
+                <input type="number" id="duration-${row.apptID}" value="${row.duration}" step="0.25" min="0.25" style="width: 60px;" />
+                <button onclick="updateDuration('${row.apptID}')">Save</button>
+            </td>
             <td>${row.petName}</td>
             <td>${row.serviceName}</td>
             <td>${row.appointmentStatus}</td>
