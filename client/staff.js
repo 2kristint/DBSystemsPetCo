@@ -111,7 +111,9 @@ async function fetchStaffData() {
     document.getElementById("profile-phone").textContent = profile.phoneNo;
     document.getElementById("profile-email").textContent = profile.email;
     document.getElementById("profile-availability").textContent = profile.availability;
-    document.getElementById("profile-rating").textContent = profile.staffRating;
+    document.getElementById("profile-rating").textContent = 
+    `${profile.staffRating} (${profile.reviewCount} ${profile.reviewCount === 1 ? "review" : "reviews"})`;
+    // document.getElementById("profile-rating").textContent = profile.staffRating;
 
     // 2. SERVICES: fetch services this staff member can perform
     const servicesRes = await fetch(`${API}/api/staff/${STAFF_ID}/services`);
@@ -143,10 +145,16 @@ async function fetchStaffData() {
             <td>${row.startTime}</td>
             <td>${row.duration}</td>
             <td>
-                <input type="number" id="duration-${row.apptID}" value="${row.duration}" step="0.25" min="0.25" style="width: 60px;" />
-                <button onclick="updateDuration('${row.apptID}')">Save</button>
+              <input type="number" id="duration-${row.apptID}" value="${row.duration}" step="0.25" min="0.25" style="width: 60px;" />
+              <button onclick="updateDuration('${row.apptID}')">Save</button>
             </td>
             <td>${row.petName}</td>
+            <td>${row.petType}</td>
+            <td>${row.breed}</td>
+            <td>${row.size}</td>
+            <td>${row.behavioralNotes ?? ""}</td>
+            <td>${row.customerName}</td>
+            <td>${row.customerPhone}</td>
             <td>${row.serviceName}</td>
             <td>${row.appointmentStatus}</td>
             <td>${row.serviceNotes ?? ""}</td>

@@ -174,10 +174,11 @@ app.get("/api/staff/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await db.query(
-      `SELECT staffID, staffName, role, phoneNo, email, availability, staffRating
-       FROM Staff
+      `SELECT staffID, staffName, role, phoneNo, email, availability, staffRating, (SELECT COUNT(*) FROM Appointment
+      WHERE staffID = ? AND appointmentRating IS NOT NULL) AS reviewCount
+      FROM Staff
        WHERE staffID = ?`,
-      [id],
+      [id, id],
     );
     res.json(rows[0]);
   } catch (err) {
@@ -207,14 +208,9 @@ app.get("/api/staff/:id/appointments", async (req, res) => {
   const { id } = req.params;
   try {
     const [appointments] = await db.query(
-      `SELECT a.apptID, a.date, a.startTime, a.duration, a.appointmentStatus,
-              a.serviceNotes, a.appointmentRating,
-              p.petName, s.serviceName
-       FROM Appointment a
-       JOIN Pet p ON p.petID = a.petID
-       JOIN Service s ON s.serviceID = a.serviceID
-       WHERE a.staffID = ?
-       ORDER BY a.date, a.startTime`,
+      `SELECT a.apptID, a.date, a.startTime, a.duration, a.appointmentStatus, a.serviceNotes, a.appointmentRating, p.petName, p.type AS petType, p.breed, p.size, p.behavioralNotes, s.serviceName, c.customerName, c.phoneNo AS customerPhone
+      FROM Appointment a JOIN Pet p ON p.petID = a.petID JOIN Service s ON s.serviceID = a.serviceID JOIN Customer c ON c.customerID = p.customerID
+      WHERE a.staffID = ? ORDER BY a.date, a.startTime`,
       [id],
     );
     res.json(appointments);
