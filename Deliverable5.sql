@@ -327,10 +327,10 @@ INSERT INTO Admin VALUES
 -- Invoice
 INSERT INTO Invoice VALUES
 ('I0001', 'C0001', 'AD01', 'unpaid', '123 Elm St, Chicago', 75.00, '2025-03-20', '2025-03-30', 'Dog Walking Service'),
-('I0002', 'C0001', 'AD02', 'paid', '123 Elm St, Chicago', 150.00, '2025-03-21', '2025-03-31', 'Pet Sitting Service'),
-('I0003', 'C0001', 'AD03', 'unpaid', '123 Elm St, Chicago', 100.00, '2025-03-22', '2025-04-01', 'Training Session'),
-('I0004', 'C0001', 'AD04', 'paid', '123 Elm St, Chicago', 200.00, '2025-03-23', '2025-04-02', 'Overnight Sitting'),
-('I0005', 'C0001', 'AD05', 'unpaid', '123 Elm St, Chicago', 60.00, '2025-03-24', '2025-04-03', 'Short Walk');
+('I0002', 'C0002', 'AD02', 'paid', '123 Elm St, Chicago', 150.00, '2025-03-21', '2025-03-31', 'Pet Sitting Service'),
+('I0003', 'C0003', 'AD03', 'unpaid', '123 Elm St, Chicago', 100.00, '2025-03-22', '2025-04-01', 'Training Session'),
+('I0004', 'C0004', 'AD04', 'paid', '123 Elm St, Chicago', 200.00, '2025-03-23', '2025-04-02', 'Overnight Sitting'),
+('I0005', 'C0005', 'AD05', 'unpaid', '123 Elm St, Chicago', 60.00, '2025-03-24', '2025-04-03', 'Short Walk');
 
 -- Payment
 INSERT INTO Payment VALUES
