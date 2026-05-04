@@ -117,9 +117,15 @@ CREATE TABLE Payment (
 
 -- TRIGGERS (defined before inserts so they fire on seed data)
 
+-- Recalculate a staff member's rating whenever appointments change
+DROP TRIGGER IF EXISTS trg_update_staff_rating_insert;
+DROP TRIGGER IF EXISTS trg_update_staff_rating_update;
+DROP TRIGGER IF EXISTS trg_update_staff_rating_delete;
 DROP TRIGGER IF EXISTS trg_update_staff_rating;
+
 DELIMITER ;;
-CREATE TRIGGER trg_update_staff_rating
+
+CREATE TRIGGER trg_update_staff_rating_insert
 AFTER INSERT ON Appointment
 FOR EACH ROW
 BEGIN
@@ -132,6 +138,35 @@ BEGIN
     )
     WHERE staffID = NEW.staffID;
 END;;
+
+CREATE TRIGGER trg_update_staff_rating_update
+AFTER UPDATE ON Appointment
+FOR EACH ROW
+BEGIN
+    UPDATE Staff
+    SET staffRating = (
+        SELECT AVG(appointmentRating)
+        FROM Appointment
+        WHERE staffID = NEW.staffID
+          AND appointmentRating IS NOT NULL
+    )
+    WHERE staffID = NEW.staffID;
+END;;
+
+CREATE TRIGGER trg_update_staff_rating_delete
+AFTER DELETE ON Appointment
+FOR EACH ROW
+BEGIN
+    UPDATE Staff
+    SET staffRating = (
+        SELECT AVG(appointmentRating)
+        FROM Appointment
+        WHERE staffID = OLD.staffID
+          AND appointmentRating IS NOT NULL
+    )
+    WHERE staffID = OLD.staffID;
+END;;
+
 DELIMITER ;
 
 DROP TRIGGER IF EXISTS create_invoice_after_completion;
