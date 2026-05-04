@@ -14,7 +14,12 @@
     <p><strong>Role:</strong> <span id="profile-role"></span></p>
     <p><strong>Phone:</strong> <span id="profile-phone"></span></p>
     <p><strong>Email:</strong> <span id="profile-email"></span></p>
-    <p><strong>Availability:</strong> <span id="profile-availability"></span></p>
+    <p>
+      <strong>Availability:</strong>
+      <span id="profile-availability"></span>
+      <input type="text" id="availability-input" placeholder="e.g. Mon-Fri 8am-4pm" />
+      <button onclick="updateAvailability()">Save</button>
+    </p>
     <p><strong>Rating:</strong> <span id="profile-rating"></span></p>
 
     <hr />
@@ -50,8 +55,10 @@
           <th>Service</th>
           <th>Status</th>
           <th>Notes</th>
+          <th>Edit Notes</th>
           <th>Rating</th>
           <th>Updates</th>
+
         </tr>
       </thead>
       <tbody id="appointments"></tbody>

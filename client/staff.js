@@ -2,7 +2,7 @@ const API = "http://localhost:5000";
 
 // Hardcoded for now. When login is added, this will be set
 // based on whoever logged in.
-const STAFF_ID = "S0001";
+const STAFF_ID = "S0003";
 
 async function updateStatus(apptID) {
   // Read the new status from the dropdown for this appointment
@@ -18,6 +18,40 @@ async function updateStatus(apptID) {
     fetchStaffData();
   } catch (err) {
     console.error("Failed to update status:", err);
+  }
+}
+
+async function updateNotes(apptID) {
+  // Read the new notes from the input for this appointment
+  const newNotes = document.getElementById(`notes-${apptID}`).value;
+
+  try {
+    await fetch(`${API}/api/appointments/${apptID}/notes`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serviceNotes: newNotes }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update notes:", err);
+  }
+}
+
+async function updateAvailability() {
+  const newAvailability = document.getElementById("availability-input").value;
+
+  // Don't submit empty values
+  if (!newAvailability.trim()) return;
+
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/availability`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availability: newAvailability }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update availability:", err);
   }
 }
 
@@ -67,6 +101,10 @@ async function fetchStaffData() {
             <td>${row.serviceName}</td>
             <td>${row.appointmentStatus}</td>
             <td>${row.serviceNotes ?? ""}</td>
+            <td>
+              <input type="text" id="notes-${row.apptID}" value="${row.serviceNotes ?? ""}" />
+              <button onclick="updateNotes('${row.apptID}')">Save Notes</button>
+            </td>
             <td>${row.appointmentRating ?? ""}</td>
             <td>
               <select id="status-${row.apptID}">

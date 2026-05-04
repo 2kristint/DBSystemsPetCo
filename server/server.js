@@ -113,6 +113,36 @@ app.post("/api/appointments", async (req, res) => {
   }
 });
 
+// Update an appointment's service notes
+app.put("/api/appointments/:id/notes", async (req, res) => {
+  const { id } = req.params;
+  const { serviceNotes } = req.body;
+  try {
+    await db.query(
+      `UPDATE Appointment SET serviceNotes = ? WHERE apptID = ?`,
+      [serviceNotes, id],
+    );
+    res.json({ message: "Notes updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update a staff member's availability
+app.put("/api/staff/:id/availability", async (req, res) => {
+  const { id } = req.params;
+  const { availability } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET availability = ? WHERE staffID = ?`,
+      [availability, id],
+    );
+    res.json({ message: "Availability updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // Update tuple
 app.put("/api/appointments/:id", async (req, res) => {
   const { id } = req.params;
