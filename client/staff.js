@@ -1,7 +1,6 @@
 const API = "http://localhost:5000";
 
-// Hardcoded for now. When login is added, this will be set
-// based on whoever logged in.
+// Hardcoded for demo purposes.
 const STAFF_ID = "S0001";
 
 async function updateStatus(apptID) {
