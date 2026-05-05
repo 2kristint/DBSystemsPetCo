@@ -63,6 +63,7 @@ async function fetchCustomerData() {
 
     // Render Appointments
     document.getElementById("appointments").innerHTML = data.appointmentStatus
+      .filter((row) => row.petName === "Amber")
       .map(
         (row) => `
             <tr>
