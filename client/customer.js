@@ -93,7 +93,7 @@ async function fetchCustomerData() {
     // (Extracting unique services from the staff/service join if necessary)
     const services = data.staff.reduce((acc, current) => {
       if (!acc.find((s) => s.serviceID === current.serviceID)) {
-        acc.push({ id: current.serviceID, name: current.serviceName });
+        acc.push({ serviceID: current.serviceID, name: current.serviceName });
       }
       return acc;
     }, []);
@@ -101,7 +101,7 @@ async function fetchCustomerData() {
     document.getElementById("service-select").innerHTML =
       '<option value="">-- Select Service --</option>' +
       services
-        .map((s) => `<option value="${s.id}">${s.name}</option>`)
+        .map((s) => `<option value="${s.serviceID}">${s.name}</option>`)
         .join("");
 
     // Populate Staff Dropdown
