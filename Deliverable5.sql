@@ -406,6 +406,7 @@ CALL GetPetServiceUsage();
 
 DROP PROCEDURE IF EXISTS GetPeakHours;
 DELIMITER $$
+-- Get the hours of the day where the most appointments are scheduled
 CREATE PROCEDURE GetPeakHours()
 BEGIN
     SELECT 
