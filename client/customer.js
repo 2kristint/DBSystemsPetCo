@@ -54,7 +54,7 @@ async function fetchCustomerData() {
             <tr>
                 <td>${row.staffID}</td>
                 <td>${row.staffName}</td>
-                <td>${row.staffRatinggi}</td>
+                <td>${row.staffRating}</td>
             </tr>
         `,
       )
