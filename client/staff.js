@@ -175,6 +175,11 @@ async function fetchStaffData() {
         `,
       )
       .join("");
+
+      // 4. COMPANY STATS: monthly service count
+    const countRes = await fetch(`${API}/api/monthly-service-count/3/2025`);
+    const countData = await countRes.json();
+    document.getElementById("monthly-count").textContent = countData.total;
   } catch (err) {
     console.error("Error fetching staff data:", err);
   }

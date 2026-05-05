@@ -264,6 +264,20 @@ app.put("/api/appointments/:id/duration", async (req, res) => {
   }
 });
 
+// Total company appointments for a given month/year (uses GetMonthlyServiceCount function)
+app.get("/api/monthly-service-count/:month/:year", async (req, res) => {
+  const { month, year } = req.params;
+  try {
+    const [rows] = await db.query(
+      `SELECT GetMonthlyServiceCount(?, ?) AS total`,
+      [month, year],
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 /* Starting server */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
