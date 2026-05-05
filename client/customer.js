@@ -31,6 +31,7 @@ async function fetchCustomerData() {
 
     // Render Invoices
     document.getElementById("invoices").innerHTML = data.invoices
+      .filter((row) => row.customerName === "Barry")
       .map(
         (row) => `
             <tr>
@@ -60,7 +61,7 @@ async function fetchCustomerData() {
       )
       .join("");
 
-    // Render Appointments (Notice the API variable in the delete button was fixed above)
+    // Render Appointments
     document.getElementById("appointments").innerHTML = data.appointmentStatus
       .map(
         (row) => `
@@ -79,8 +80,7 @@ async function fetchCustomerData() {
       )
       .join("");
 
-    // Populate Pet Dropdown (Assuming data.pets exists, or use data from your objects)
-    // If your /data endpoint doesn't return all pets, you may need to add it to the backend query.
+    // Populate Pet Dropdown
     if (data.pets) {
       document.getElementById("pet-select").innerHTML =
         '<option value="">-- Select Pet --</option>' +
@@ -90,7 +90,6 @@ async function fetchCustomerData() {
     }
 
     // Populate Service Dropdown
-    // (Extracting unique services from the staff/service join if necessary)
     const services = data.staff.reduce((acc, current) => {
       if (!acc.find((s) => s.serviceID === current.serviceID)) {
         acc.push({ id: current.serviceID, name: current.serviceName });
