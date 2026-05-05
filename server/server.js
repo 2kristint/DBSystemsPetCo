@@ -269,6 +269,56 @@ app.put("/api/appointments/:id/duration", async (req, res) => {
   }
 });
 
+// Update invoice status
+app.put("/api/invoices/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE Invoice SET status = ? WHERE invoiceID = ?`,
+      [status, id],
+    );
+    res.json({ message: "Invoice status updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+//Update Payment Status
+app.put("/api/payments/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE Payment SET status = ? WHERE invoiceID = ?`,
+      [status, id],
+    );
+    res.json({ message: "Payment status updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Delete Invoice
+app.delete("/api/invoices/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query(
+      `DELETE FROM Payment WHERE invoiceID = ?`,
+      [id],
+    );
+    await db.query(
+      `DELETE FROM Invoice WHERE invoiceID = ?`,
+      [id],
+    );
+    res.json({ message: "Invoice deleted" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // Total company appointments for a given month/year (uses GetMonthlyServiceCount function)
 app.get("/api/monthly-service-count/:month/:year", async (req, res) => {
   const { month, year } = req.params;
@@ -277,6 +327,27 @@ app.get("/api/monthly-service-count/:month/:year", async (req, res) => {
       `SELECT GetMonthlyServiceCount(?, ?) AS total`,
       [month, year],
     );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+
+// Peak hours in a day for scheduling appointments
+app.get("/api/peak-hours", async (req, res) => {
+  try {
+    const [rows] = await db.query(`CALL GetPeakHours();`);
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Track which pets use which services most
+app.get("/api/pet-service-usage", async (req, res) => {
+  try {
+    const [rows] = await db.query(`CALL GetPetServiceUsage();`);
     res.json(rows[0]);
   } catch (err) {
     res.status(500).send(err.message);

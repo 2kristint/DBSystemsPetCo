@@ -37,6 +37,22 @@
       <tbody id="staff"></tbody>
     </table>
 
+     <h2>Top Rated Staff</h2>
+    <p>
+      Analyze staff appointment ratings by staff member compared to overall
+      average ratings to evaluate performance.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Staff ID</th>
+          <th>Staff Name</th>
+          <th>Rating</th>
+        </tr>
+      </thead>
+      <tbody id="staff-ratings"></tbody>
+    </table>
+
     <h2>Invoice Overview</h2>
     <p>Show all information from invoices table.</p>
     <table>
@@ -55,22 +71,6 @@
       <tbody id="invoices"></tbody>
     </table>
 
-    <h2>Top Rated Staff</h2>
-    <p>
-      Analyze staff appointment ratings by staff member compared to overall
-      average ratings to evaluate performance.
-    </p>
-    <table>
-      <thead>
-        <tr>
-          <th>Staff ID</th>
-          <th>Staff Name</th>
-          <th>Rating</th>
-        </tr>
-      </thead>
-      <tbody id="staff-ratings"></tbody>
-    </table>
-
     <h2>Appointment Status</h2>
     <p>Show all appointments and their status.</p>
     <table>
@@ -86,6 +86,45 @@
       </thead>
       <tbody id="appointments"></tbody>
     </table>
+
+
+    <h2>Peak Hours</h2>
+    <p>Find peak hours that appointments are scheduled</p>
+    <button onclick="loadPeakHours()">Get Peak Hours</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Hour</th>
+          <th>Total Appointments</th>
+        </tr>
+      </thead>
+      <tbody id="peak-hours"></tbody>
+    </table>
+    
+    
+
+    <h2>Pet Service Usage</h2>
+    <p>Show which pets use which services most</p>
+    <button onclick="loadPetService()">Get Usage</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Pet ID</th>
+          <th>Pet Name</th>
+          <th>Service</th>
+          <th>Times Used</th>
+        </tr>
+      </thead>
+      <tbody id="pet-service"></tbody>
+    </table>
+
+
+    <h2>Monthly Service Count</h2>
+    <p>Find total company appointments for any given month/year</p>
+    <input type="number" id="month" placeholder="Month (1-12)" />
+    <input type="number" id="year" placeholder="Year (e.g. 2025)" />
+    <button onclick="loadMonthly()">Get Count</button>
+    <p id="monthly-result"></p>
 
     <script src="app.js"></script>
   </body>

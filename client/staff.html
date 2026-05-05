@@ -78,8 +78,13 @@
       <tbody id="appointments"></tbody>
     </table>
     <hr />
-    <h2>Company Stats</h2>
-    <p><strong>Total appointments in March 2025:</strong> <span id="monthly-count"></span></p>
+    
+    <h2>Monthly Service Count</h2>
+    <p>Find total company appointments for any given month/year</p>
+    <input type="number" id="month" placeholder="Month (1-12)" />
+    <input type="number" id="year" placeholder="Year (e.g. 2025)" />
+    <button onclick="loadMonthly()">Get Count</button>
+    <p id="monthly-result"></p>
 
     <script src="staff.js"></script>
   </body>
