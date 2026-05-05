@@ -1,3 +1,4 @@
+DROP DATABASE IF EXISTS PetServices;
 CREATE DATABASE PetServices;
 USE PetServices;
 
@@ -117,9 +118,15 @@ CREATE TABLE Payment (
 
 -- TRIGGERS (defined before inserts so they fire on seed data)
 
+-- Recalculate a staff member's rating whenever appointments change
+DROP TRIGGER IF EXISTS trg_update_staff_rating_insert;
+DROP TRIGGER IF EXISTS trg_update_staff_rating_update;
+DROP TRIGGER IF EXISTS trg_update_staff_rating_delete;
 DROP TRIGGER IF EXISTS trg_update_staff_rating;
+
 DELIMITER ;;
-CREATE TRIGGER trg_update_staff_rating
+
+CREATE TRIGGER trg_update_staff_rating_insert
 AFTER INSERT ON Appointment
 FOR EACH ROW
 BEGIN
@@ -132,12 +139,43 @@ BEGIN
     )
     WHERE staffID = NEW.staffID;
 END;;
+
+CREATE TRIGGER trg_update_staff_rating_update
+AFTER UPDATE ON Appointment
+FOR EACH ROW
+BEGIN
+    UPDATE Staff
+    SET staffRating = (
+        SELECT AVG(appointmentRating)
+        FROM Appointment
+        WHERE staffID = NEW.staffID
+          AND appointmentRating IS NOT NULL
+    )
+    WHERE staffID = NEW.staffID;
+END;;
+
+CREATE TRIGGER trg_update_staff_rating_delete
+AFTER DELETE ON Appointment
+FOR EACH ROW
+BEGIN
+    UPDATE Staff
+    SET staffRating = (
+        SELECT AVG(appointmentRating)
+        FROM Appointment
+        WHERE staffID = OLD.staffID
+          AND appointmentRating IS NOT NULL
+    )
+    WHERE staffID = OLD.staffID;
+END;;
+
 DELIMITER ;
 
-DROP TRIGGER IF EXISTS create_invoice_after_completion;
+DROP TRIGGER IF EXISTS create_invoice_payment_after_completion;
 DELIMITER %%
--- Trigger creates invoices when appointment status is changed to complete
-CREATE TRIGGER create_invoice_after_completion
+-- Trigger creates invoices and payment record when appointment status is changed to complete
+-- payment status is set to pending, method is set to online (can be changed by admin later),
+-- and date payment was made is set to NULL (until admin changes it once payment is made)
+CREATE TRIGGER create_invoice_payment_after_completion
 AFTER UPDATE ON Appointment
 FOR EACH ROW
 BEGIN
@@ -146,6 +184,7 @@ BEGIN
     DECLARE svcDesc VARCHAR(100);
     DECLARE rate DECIMAL(10,2);
     DECLARE amt DECIMAL(10,2);
+    DECLARE invID VARCHAR(10);
     IF NEW.appointmentStatus = 'complete' AND OLD.appointmentStatus <> 'complete' THEN
         SELECT customerID INTO custID
         FROM Pet
@@ -167,10 +206,11 @@ BEGIN
             SET rate = 60;
         END IF;
         SET amt = NEW.duration * rate;
-
+		SET invID = CONCAT('AUTO-', NEW.apptID);
+        
         INSERT INTO Invoice (invoiceID, customerID, adminID, status, billingAddress, amount, dateCreated, dueDate, serviceDescription)
         VALUES (
-            CONCAT('AUTO', NEW.apptID),
+            invID,
             custID,
             'AD01',
             'unpaid',
@@ -180,10 +220,21 @@ BEGIN
             DATE_ADD(CURDATE(), INTERVAL 10 DAY),
             svcDesc
         );
+        INSERT INTO Payment (paymentID, invoiceID,adminID, amount, date, method, status)
+		VALUES (
+			CONCAT('PM-', NEW.apptID),
+			invID,
+			'AD01',
+			amt,
+			null,
+			'online',
+			'pending'
+		);
 
     END IF;
 END %%
 DELIMITER ;
+
 
 DROP TRIGGER IF EXISTS trg_prevent_overlaps;
 DELIMITER $$
@@ -292,10 +343,10 @@ INSERT INTO Admin VALUES
 -- Invoice
 INSERT INTO Invoice VALUES
 ('I0001', 'C0001', 'AD01', 'unpaid', '123 Elm St, Chicago', 75.00, '2025-03-20', '2025-03-30', 'Dog Walking Service'),
-('I0002', 'C0001', 'AD02', 'paid', '123 Elm St, Chicago', 150.00, '2025-03-21', '2025-03-31', 'Pet Sitting Service'),
-('I0003', 'C0001', 'AD03', 'unpaid', '123 Elm St, Chicago', 100.00, '2025-03-22', '2025-04-01', 'Training Session'),
-('I0004', 'C0001', 'AD04', 'paid', '123 Elm St, Chicago', 200.00, '2025-03-23', '2025-04-02', 'Overnight Sitting'),
-('I0005', 'C0001', 'AD05', 'unpaid', '123 Elm St, Chicago', 60.00, '2025-03-24', '2025-04-03', 'Short Walk');
+('I0002', 'C0002', 'AD02', 'paid', '123 Elm St, Chicago', 150.00, '2025-03-21', '2025-03-31', 'Pet Sitting Service'),
+('I0003', 'C0003', 'AD03', 'unpaid', '123 Elm St, Chicago', 100.00, '2025-03-22', '2025-04-01', 'Training Session'),
+('I0004', 'C0004', 'AD04', 'paid', '123 Elm St, Chicago', 200.00, '2025-03-23', '2025-04-02', 'Overnight Sitting'),
+('I0005', 'C0005', 'AD05', 'unpaid', '123 Elm St, Chicago', 60.00, '2025-03-24', '2025-04-03', 'Short Walk');
 
 -- Payment
 INSERT INTO Payment VALUES
@@ -308,25 +359,30 @@ INSERT INTO Payment VALUES
 
 -- TEST TRIGGERS (run after inserts)
 
--- test create_invoice_after_completion
+-- test create_invoice_payment_after_completion
 SELECT * FROM Appointment;
 UPDATE Appointment
 SET appointmentStatus = 'scheduled'
 WHERE apptID = 'A0001';
 SELECT * FROM Invoice;
+SELECT * FROM Payment;
+DELETE FROM Payment
+WHERE paymentID = 'PM-A0001';
 DELETE FROM Invoice
-WHERE invoiceID = 'AUTOA0001';
+WHERE invoiceID = 'AUTO-A0001';
+
 
 -- test trg_prevent_overlaps
+/* This test fails and SQL stops executing here, for demo purposes this is commented out
 SELECT * FROM Appointment;
 INSERT INTO Appointment
 VALUES (
 'A0006', 'P0002', 'S0001', 'scheduled', 'J01', '2025-03-20', '11:30:00', 1.00, 'Overlap test', 1);
 DELETE FROM Appointment
 WHERE apptID = 'A0006';
+*/
 
-
--- PROCEDURE
+-- PROCEDURES
 DELIMITER ;;
 -- Track which pets use which services most 
 CREATE PROCEDURE GetPetServiceUsage()
@@ -345,6 +401,24 @@ END;;
 
 DELIMITER ;
 CALL GetPetServiceUsage();
+
+
+
+DROP PROCEDURE IF EXISTS GetPeakHours;
+DELIMITER $$
+-- Get the hours of the day where the most appointments are scheduled
+CREATE PROCEDURE GetPeakHours()
+BEGIN
+    SELECT 
+        HOUR(startTime) AS peak_hours,
+        COUNT(*) AS total_appointments
+    FROM Appointment
+    GROUP BY HOUR(startTime)
+    ORDER BY total_appointments DESC;
+END $$
+
+DELIMITER ;
+CALL GetPeakHours();
 
 
 -- FUNCTION

@@ -1,7 +1,6 @@
 const API = "http://localhost:5000";
 
-// Hardcoded for now. When login is added, this will be set
-// based on whoever logged in.
+// Hardcoded for demo purposes.
 const STAFF_ID = "S0001";
 
 async function updateStatus(apptID) {
@@ -21,6 +20,85 @@ async function updateStatus(apptID) {
   }
 }
 
+async function updateNotes(apptID) {
+  // Read the new notes from the input for this appointment
+  const newNotes = document.getElementById(`notes-${apptID}`).value;
+
+  try {
+    await fetch(`${API}/api/appointments/${apptID}/notes`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ serviceNotes: newNotes }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update notes:", err);
+  }
+}
+
+async function updateAvailability() {
+  const newAvailability = document.getElementById("availability-input").value;
+
+  // Don't submit empty values
+  if (!newAvailability.trim()) return;
+
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/availability`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ availability: newAvailability }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update availability:", err);
+  }
+}
+
+async function updatePhone() {
+  const newPhone = document.getElementById("phone-input").value;
+  if (!newPhone.trim()) return;
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/phone`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phoneNo: newPhone }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update phone:", err);
+  }
+}
+
+async function updateEmail() {
+  const newEmail = document.getElementById("email-input").value;
+  if (!newEmail.trim()) return;
+  try {
+    await fetch(`${API}/api/staff/${STAFF_ID}/email`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: newEmail }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update email:", err);
+  }
+}
+
+async function updateDuration(apptID) {
+  const newDuration = document.getElementById(`duration-${apptID}`).value;
+  if (!newDuration) return;
+  try {
+    await fetch(`${API}/api/appointments/${apptID}/duration`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ duration: parseFloat(newDuration) }),
+    });
+    fetchStaffData();
+  } catch (err) {
+    console.error("Failed to update duration:", err);
+  }
+}
+
 async function fetchStaffData() {
   try {
     // 1. PROFILE: fetch this staff member's basic info
@@ -32,7 +110,9 @@ async function fetchStaffData() {
     document.getElementById("profile-phone").textContent = profile.phoneNo;
     document.getElementById("profile-email").textContent = profile.email;
     document.getElementById("profile-availability").textContent = profile.availability;
-    document.getElementById("profile-rating").textContent = profile.staffRating;
+    document.getElementById("profile-rating").textContent = 
+    `${profile.staffRating} (${profile.reviewCount} ${profile.reviewCount === 1 ? "review" : "reviews"})`;
+    // document.getElementById("profile-rating").textContent = profile.staffRating;
 
     // 2. SERVICES: fetch services this staff member can perform
     const servicesRes = await fetch(`${API}/api/staff/${STAFF_ID}/services`);
@@ -63,10 +143,24 @@ async function fetchStaffData() {
             <td>${new Date(row.date).toLocaleDateString()}</td>
             <td>${row.startTime}</td>
             <td>${row.duration}</td>
+            <td>
+              <input type="number" id="duration-${row.apptID}" value="${row.duration}" step="0.25" min="0.25" style="width: 60px;" />
+              <button onclick="updateDuration('${row.apptID}')">Save</button>
+            </td>
             <td>${row.petName}</td>
+            <td>${row.petType}</td>
+            <td>${row.breed}</td>
+            <td>${row.size}</td>
+            <td>${row.behavioralNotes ?? ""}</td>
+            <td>${row.customerName}</td>
+            <td>${row.customerPhone}</td>
             <td>${row.serviceName}</td>
             <td>${row.appointmentStatus}</td>
             <td>${row.serviceNotes ?? ""}</td>
+            <td>
+              <input type="text" id="notes-${row.apptID}" value="${row.serviceNotes ?? ""}" />
+              <button onclick="updateNotes('${row.apptID}')">Save Notes</button>
+            </td>
             <td>${row.appointmentRating ?? ""}</td>
             <td>
               <select id="status-${row.apptID}">
@@ -87,3 +181,18 @@ async function fetchStaffData() {
 
 // Run when the page loads
 fetchStaffData();
+
+async function loadMonthly() {
+  const month = document.getElementById("month").value;
+  const year = document.getElementById("year").value;
+  if (!month || !year) {
+    alert("Please enter both month and year");
+    return;
+  }
+  const res = await fetch(
+    `${API}/api/monthly-service-count/${month}/${year}`
+  );
+  const data = await res.json();
+  document.getElementById("monthly-result").innerText =
+    `Total Services: ${data.total}`;
+}

@@ -50,6 +50,10 @@ app.get("/data", async (req, res) => {
       WHERE staffRating > (SELECT AVG(staffRating) FROM Staff) 
       ORDER BY staffRating DESC;`,
     );
+    // All staff (for the customer's booking dropdown)
+    const [allStaff] = await db.query(
+      `SELECT staffID, staffName, role FROM Staff ORDER BY staffName;`
+    );
     // Appointment status
     const [appointmentStatus] = await db.query(
       `SELECT A.apptID, P.petName, Se.serviceName, St.staffName, Se.standardDuration AS appt_len, A.appointmentStatus AS appt_status 
@@ -67,6 +71,7 @@ app.get("/data", async (req, res) => {
       staff,
       invoices,
       staffRatings,
+      allStaff,
       appointmentStatus,
       pets,
     });
@@ -113,6 +118,36 @@ app.post("/api/appointments", async (req, res) => {
   }
 });
 
+// Update an appointment's service notes
+app.put("/api/appointments/:id/notes", async (req, res) => {
+  const { id } = req.params;
+  const { serviceNotes } = req.body;
+  try {
+    await db.query(
+      `UPDATE Appointment SET serviceNotes = ? WHERE apptID = ?`,
+      [serviceNotes, id],
+    );
+    res.json({ message: "Notes updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update a staff member's availability
+app.put("/api/staff/:id/availability", async (req, res) => {
+  const { id } = req.params;
+  const { availability } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET availability = ? WHERE staffID = ?`,
+      [availability, id],
+    );
+    res.json({ message: "Availability updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
 // Update tuple
 app.put("/api/appointments/:id", async (req, res) => {
   const { id } = req.params;
@@ -144,10 +179,11 @@ app.get("/api/staff/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const [rows] = await db.query(
-      `SELECT staffID, staffName, role, phoneNo, email, availability, staffRating
-       FROM Staff
+      `SELECT staffID, staffName, role, phoneNo, email, availability, staffRating, (SELECT COUNT(*) FROM Appointment
+      WHERE staffID = ? AND appointmentRating IS NOT NULL) AS reviewCount
+      FROM Staff
        WHERE staffID = ?`,
-      [id],
+      [id, id],
     );
     res.json(rows[0]);
   } catch (err) {
@@ -177,17 +213,142 @@ app.get("/api/staff/:id/appointments", async (req, res) => {
   const { id } = req.params;
   try {
     const [appointments] = await db.query(
-      `SELECT a.apptID, a.date, a.startTime, a.duration, a.appointmentStatus,
-              a.serviceNotes, a.appointmentRating,
-              p.petName, s.serviceName
-       FROM Appointment a
-       JOIN Pet p ON p.petID = a.petID
-       JOIN Service s ON s.serviceID = a.serviceID
-       WHERE a.staffID = ?
-       ORDER BY a.date, a.startTime`,
+      `SELECT a.apptID, a.date, a.startTime, a.duration, a.appointmentStatus, a.serviceNotes, a.appointmentRating, p.petName, p.type AS petType, p.breed, p.size, p.behavioralNotes, s.serviceName, c.customerName, c.phoneNo AS customerPhone
+      FROM Appointment a JOIN Pet p ON p.petID = a.petID JOIN Service s ON s.serviceID = a.serviceID JOIN Customer c ON c.customerID = p.customerID
+      WHERE a.staffID = ? ORDER BY a.date, a.startTime`,
       [id],
     );
     res.json(appointments);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update a staff member's phone
+app.put("/api/staff/:id/phone", async (req, res) => {
+  const { id } = req.params;
+  const { phoneNo } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET phoneNo = ? WHERE staffID = ?`,
+      [phoneNo, id],
+    );
+    res.json({ message: "Phone number updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update a staff member's email
+app.put("/api/staff/:id/email", async (req, res) => {
+  const { id } = req.params;
+  const { email } = req.body;
+  try {
+    await db.query(
+      `UPDATE Staff SET email = ? WHERE staffID = ?`,
+      [email, id],
+    );
+    res.json({ message: "Email updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update an appointment's duration
+app.put("/api/appointments/:id/duration", async (req, res) => {
+  const { id } = req.params;
+  const { duration } = req.body;
+  try {
+    await db.query(
+      `UPDATE Appointment SET duration = ? WHERE apptID = ?`,
+      [duration, id],
+    );
+    res.json({ message: "Duration updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Update invoice status
+app.put("/api/invoices/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE Invoice SET status = ? WHERE invoiceID = ?`,
+      [status, id],
+    );
+    res.json({ message: "Invoice status updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+//Update Payment Status
+app.put("/api/payments/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    await db.query(
+      `UPDATE Payment SET status = ? WHERE invoiceID = ?`,
+      [status, id],
+    );
+    res.json({ message: "Payment status updated" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Delete Invoice
+app.delete("/api/invoices/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    await db.query(
+      `DELETE FROM Payment WHERE invoiceID = ?`,
+      [id],
+    );
+    await db.query(
+      `DELETE FROM Invoice WHERE invoiceID = ?`,
+      [id],
+    );
+    res.json({ message: "Invoice deleted" });
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Total company appointments for a given month/year (uses GetMonthlyServiceCount function)
+app.get("/api/monthly-service-count/:month/:year", async (req, res) => {
+  const { month, year } = req.params;
+  try {
+    const [rows] = await db.query(
+      `SELECT GetMonthlyServiceCount(?, ?) AS total`,
+      [month, year],
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+
+// Peak hours in a day for scheduling appointments
+app.get("/api/peak-hours", async (req, res) => {
+  try {
+    const [rows] = await db.query(`CALL GetPeakHours();`);
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).send(err.message);
+  }
+});
+
+// Track which pets use which services most
+app.get("/api/pet-service-usage", async (req, res) => {
+  try {
+    const [rows] = await db.query(`CALL GetPetServiceUsage();`);
+    res.json(rows[0]);
   } catch (err) {
     res.status(500).send(err.message);
   }

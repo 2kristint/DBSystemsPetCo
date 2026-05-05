@@ -12,9 +12,21 @@
     <h2>My Profile</h2>
     <p><strong>Name:</strong> <span id="profile-name"></span></p>
     <p><strong>Role:</strong> <span id="profile-role"></span></p>
-    <p><strong>Phone:</strong> <span id="profile-phone"></span></p>
-    <p><strong>Email:</strong> <span id="profile-email"></span></p>
-    <p><strong>Availability:</strong> <span id="profile-availability"></span></p>
+    <p>
+      <strong>Phone:</strong> <span id="profile-phone"></span>
+      <input type="text" id="phone-input" placeholder="e.g. 123-456-7890" />
+      <button onclick="updatePhone()">Save</button>
+    </p>
+    <p><strong>Email:</strong> <span id="profile-email"></span>
+      <input type="text" id="email-input" placeholder="e.g. john.doe@example.com" />
+      <button onclick="updateEmail()">Save</button>
+    </p>
+    <p>
+      <strong>Availability:</strong>
+      <span id="profile-availability"></span>
+      <input type="text" id="availability-input" placeholder="e.g. Mon-Fri 8am-4pm" />
+      <button onclick="updateAvailability()">Save</button>
+    </p>
     <p><strong>Rating:</strong> <span id="profile-rating"></span></p>
 
     <hr />
@@ -46,16 +58,33 @@
           <th>Date</th>
           <th>Start Time</th>
           <th>Duration (hrs)</th>
+          <th>Edit Duration</th>
           <th>Pet</th>
+          <th>Type</th>
+          <th>Breed</th>
+          <th>Size</th>
+          <th>Behavioral Notes</th>
+          <th>Customer</th>
+          <th>Customer Phone</th>
           <th>Service</th>
           <th>Status</th>
           <th>Notes</th>
+          <th>Edit Notes</th>
           <th>Rating</th>
           <th>Updates</th>
+
         </tr>
       </thead>
       <tbody id="appointments"></tbody>
     </table>
+    <hr />
+    
+    <h2>Monthly Service Count</h2>
+    <p>Find total company appointments for any given month/year</p>
+    <input type="number" id="month" placeholder="Month (1-12)" />
+    <input type="number" id="year" placeholder="Year (e.g. 2025)" />
+    <button onclick="loadMonthly()">Get Count</button>
+    <p id="monthly-result"></p>
 
     <script src="staff.js"></script>
   </body>
