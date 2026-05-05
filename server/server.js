@@ -50,6 +50,10 @@ app.get("/data", async (req, res) => {
       WHERE staffRating > (SELECT AVG(staffRating) FROM Staff) 
       ORDER BY staffRating DESC;`,
     );
+    // All staff (for the customer's booking dropdown)
+    const [allStaff] = await db.query(
+      `SELECT staffID, staffName, role FROM Staff ORDER BY staffName;`
+    );
     // Appointment status
     const [appointmentStatus] = await db.query(
       `SELECT A.apptID, P.petName, Se.serviceName, St.staffName, Se.standardDuration AS appt_len, A.appointmentStatus AS appt_status 
@@ -67,6 +71,7 @@ app.get("/data", async (req, res) => {
       staff,
       invoices,
       staffRatings,
+      allStaff,
       appointmentStatus,
       pets,
     });

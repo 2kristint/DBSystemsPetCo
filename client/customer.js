@@ -54,7 +54,7 @@ async function fetchCustomerData() {
             <tr>
                 <td>${row.staffID}</td>
                 <td>${row.staffName}</td>
-                <td>${row.staffRating}</td>
+                <td>${row.staffRatinggi}</td>
             </tr>
         `,
       )
@@ -107,7 +107,7 @@ async function fetchCustomerData() {
     // Populate Staff Dropdown
     document.getElementById("staff-select").innerHTML =
       '<option value="">-- Select Staff --</option>' +
-      data.staffRatings
+      data.allStaff
         .map((s) => `<option value="${s.staffID}">${s.staffName}</option>`)
         .join("");
   } catch (err) {
