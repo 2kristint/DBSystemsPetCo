@@ -170,10 +170,12 @@ END;;
 
 DELIMITER ;
 
-DROP TRIGGER IF EXISTS create_invoice_after_completion;
+DROP TRIGGER IF EXISTS create_invoice_payment_after_completion;
 DELIMITER %%
--- Trigger creates invoices when appointment status is changed to complete
-CREATE TRIGGER create_invoice_after_completion
+-- Trigger creates invoices and payment record when appointment status is changed to complete
+-- payment status is set to pending, method is set to online (can be changed by admin later),
+-- and date payment was made is set to NULL (until admin changes it once payment is made)
+CREATE TRIGGER create_invoice_payment_after_completion
 AFTER UPDATE ON Appointment
 FOR EACH ROW
 BEGIN
@@ -182,6 +184,7 @@ BEGIN
     DECLARE svcDesc VARCHAR(100);
     DECLARE rate DECIMAL(10,2);
     DECLARE amt DECIMAL(10,2);
+    DECLARE invID VARCHAR(10);
     IF NEW.appointmentStatus = 'complete' AND OLD.appointmentStatus <> 'complete' THEN
         SELECT customerID INTO custID
         FROM Pet
@@ -203,10 +206,11 @@ BEGIN
             SET rate = 60;
         END IF;
         SET amt = NEW.duration * rate;
-
+		SET invID = CONCAT('AUTO-', NEW.apptID);
+        
         INSERT INTO Invoice (invoiceID, customerID, adminID, status, billingAddress, amount, dateCreated, dueDate, serviceDescription)
         VALUES (
-            CONCAT('AUTO', NEW.apptID),
+            invID,
             custID,
             'AD01',
             'unpaid',
@@ -216,10 +220,21 @@ BEGIN
             DATE_ADD(CURDATE(), INTERVAL 10 DAY),
             svcDesc
         );
+        INSERT INTO Payment (paymentID, invoiceID,adminID, amount, date, method, status)
+		VALUES (
+			CONCAT('PM-', NEW.apptID),
+			invID,
+			'AD01',
+			amt,
+			null,
+			'online',
+			'pending'
+		);
 
     END IF;
 END %%
 DELIMITER ;
+
 
 DROP TRIGGER IF EXISTS trg_prevent_overlaps;
 DELIMITER $$
@@ -344,14 +359,18 @@ INSERT INTO Payment VALUES
 
 -- TEST TRIGGERS (run after inserts)
 
--- test create_invoice_after_completion
+-- test create_invoice_payment_after_completion
 SELECT * FROM Appointment;
 UPDATE Appointment
 SET appointmentStatus = 'scheduled'
 WHERE apptID = 'A0001';
 SELECT * FROM Invoice;
+SELECT * FROM Payment;
+DELETE FROM Payment
+WHERE paymentID = 'PM-A0001';
 DELETE FROM Invoice
-WHERE invoiceID = 'AUTOA0001';
+WHERE invoiceID = 'AUTO-A0001';
+
 
 -- test trg_prevent_overlaps
 /* This test fails and SQL stops executing here, for demo purposes this is commented out
@@ -363,7 +382,7 @@ DELETE FROM Appointment
 WHERE apptID = 'A0006';
 */
 
--- PROCEDURE
+-- PROCEDURES
 DELIMITER ;;
 -- Track which pets use which services most 
 CREATE PROCEDURE GetPetServiceUsage()
@@ -382,6 +401,23 @@ END;;
 
 DELIMITER ;
 CALL GetPetServiceUsage();
+
+
+
+DROP PROCEDURE IF EXISTS GetPeakHours;
+DELIMITER $$
+CREATE PROCEDURE GetPeakHours()
+BEGIN
+    SELECT 
+        HOUR(startTime) AS peak_hours,
+        COUNT(*) AS total_appointments
+    FROM Appointment
+    GROUP BY HOUR(startTime)
+    ORDER BY total_appointments DESC;
+END $$
+
+DELIMITER ;
+CALL GetPeakHours();
 
 
 -- FUNCTION
